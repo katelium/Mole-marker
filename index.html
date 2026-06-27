@@ -619,7 +619,7 @@
 
     </div>
 
-    <div class="footer">EVG. Ms Teng </div>
+    <div class="footer">EVG . Ms Teng</div>
   </div>
 
   <script>
@@ -632,20 +632,17 @@
     //  STATE
     // =====================================================================
     let uploadedFile = null;
-    let loadedImage = new Image();
+    let loadedImage  = new Image();
     let markedDataURL = null;
+    let cachedBase64  = null;   // compressed base64 stored at upload time
 
     // =====================================================================
     //  FILE HANDLING
     // =====================================================================
-    function openCamera() {
-      document.getElementById('cameraInput').click();
-    }
-    function openGallery() {
-      document.getElementById('fileInput').click();
-    }
+    function openCamera()  { document.getElementById('cameraInput').click(); }
+    function openGallery() { document.getElementById('fileInput').click(); }
 
-    document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+    document.getElementById('fileInput').addEventListener('change',  e => { if (e.target.files[0]) processFile(e.target.files[0]); });
     document.getElementById('cameraInput').addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
 
     const zone = document.getElementById('uploadZone');
@@ -653,38 +650,83 @@
     zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
     zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
     zone.addEventListener('drop', e => {
-      e.preventDefault();
-      zone.classList.remove('drag');
+      e.preventDefault(); zone.classList.remove('drag');
       if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
     });
 
     function processFile(file) {
       uploadedFile = file;
+      cachedBase64 = null;
+
       const reader = new FileReader();
+      reader.onerror = () => showErr('Could not read the image file. Please try another photo.');
       reader.onload = e => {
+        const src = e.target.result;
         loadedImage = new Image();
-        loadedImage.onload = () => {
-          drawPreview();
-          zone.style.display = 'none';
-          document.getElementById('previewWrap').style.display = 'block';
-          document.getElementById('markBtn').disabled = false;
+
+        loadedImage.onerror = () => {
+          // HEIC or unsupported format — store raw base64 without compression as fallback
+          cachedBase64 = src.split(',')[1];
+          revealPreviewFromDataURL(src);
         };
-        loadedImage.src = e.target.result;
+
+        loadedImage.onload = () => {
+          // Compress: max 900px on longest side, JPEG 0.72
+          const MAX = 900;
+          let w = loadedImage.naturalWidth, h = loadedImage.naturalHeight;
+          if (w >= h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+          else        { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(loadedImage, 0, 0, w, h);
+
+          try {
+            const compressed = c.toDataURL('image/jpeg', 0.72);
+            cachedBase64 = compressed.split(',')[1];
+            // Redraw loadedImage from compressed so markedCanvas uses same resolution
+            loadedImage.src = compressed;
+            revealPreviewFromDataURL(compressed);
+          } catch {
+            // Canvas tainted or failed — use raw
+            cachedBase64 = src.split(',')[1];
+            revealPreviewFromDataURL(src);
+          }
+        };
+
+        loadedImage.src = src;
       };
       reader.readAsDataURL(file);
+    }
+
+    function revealPreviewFromDataURL(dataURL) {
+      const canvas = document.getElementById('previewCanvas');
+      const img = new Image();
+      img.onload = () => {
+        const maxW = canvas.parentElement.offsetWidth || 400;
+        const scale = Math.min(1, maxW / img.naturalWidth);
+        canvas.width  = img.naturalWidth  * scale;
+        canvas.height = img.naturalHeight * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+      img.src = dataURL;
+      zone.style.display = 'none';
+      document.getElementById('previewWrap').style.display = 'block';
+      document.getElementById('markBtn').disabled = false;
     }
 
     function drawPreview() {
       const canvas = document.getElementById('previewCanvas');
       const maxW = canvas.parentElement.offsetWidth || 400;
       const scale = Math.min(1, maxW / loadedImage.naturalWidth);
-      canvas.width = loadedImage.naturalWidth * scale;
+      canvas.width  = loadedImage.naturalWidth  * scale;
       canvas.height = loadedImage.naturalHeight * scale;
       canvas.getContext('2d').drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
     }
 
     function retake() {
       uploadedFile = null;
+      cachedBase64 = null;
       document.getElementById('fileInput').value = '';
       document.getElementById('cameraInput').value = '';
       zone.style.display = '';
@@ -702,9 +744,9 @@
       document.getElementById('results').style.display = 'none';
 
       try {
-        if (!uploadedFile) throw new Error('Please upload an image first.');
-        const base64   = await toBase64(uploadedFile);
-        const mimeType = uploadedFile.type || 'image/jpeg';
+        if (!cachedBase64) throw new Error('Please upload an image first.');
+        const base64   = cachedBase64;
+        const mimeType = 'image/jpeg';
         const result   = await callServer(base64, mimeType);
         renderResults(result);
       } catch (err) {
@@ -912,35 +954,8 @@
     // =====================================================================
     //  UTILITIES
     // =====================================================================
-    // Compress image before sending: max 900px on longest side, JPEG 0.72
-    // iPhone photos are 12MP+ — this reduces payload ~20× for faster Gemini response
-    function toBase64(file) {
-      return new Promise((res, rej) => {
-        const reader = new FileReader();
-        reader.onerror = rej;
-        reader.onload = e => {
-          const img = new Image();
-          img.onerror = rej;
-          img.onload = () => {
-            const MAX = 900;
-            let w = img.naturalWidth, h = img.naturalHeight;
-            // Scale by longest side so portrait iPhone photos also get resized
-            if (w > h) {
-              if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
-            } else {
-              if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            const dataURL = canvas.toDataURL('image/jpeg', 0.72);
-            res(dataURL.split(',')[1]);
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
-    }
+    // base64 is cached at upload time (in processFile) — nothing to do here
+    function toBase64() { return Promise.resolve(cachedBase64); }
 
     function esc(str = '') {
       return String(str)
@@ -966,27 +981,3 @@
       banner.style.display = 'flex';
       banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-
-    function hideErr() {
-      const b = document.getElementById('errBanner');
-      if (b) b.style.display = 'none';
-    }
-
-    function downloadMarked() {
-      if (!markedDataURL) return;
-      const name = document.getElementById('studentName').value.trim();
-      const fname = name ? `molemark_${name.replace(/\s+/g, '_')}.jpg` : 'molemark_result.jpg';
-      const a = document.createElement('a');
-      a.href = markedDataURL;
-      a.download = fname;
-      a.click();
-    }
-
-    function resetAll() {
-      uploadedFile = null;
-      markedDataURL = null;
-      document.getElementById('fileInput').value = '';
-      document.getElementById('cameraInput').value = '';
-      zone.style.display = '';
-      document.getElementById('previewWrap').style.display = 'none';
-      document.getElementById('markBtn').dis
