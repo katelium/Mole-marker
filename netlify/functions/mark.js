@@ -8,12 +8,12 @@ const https = require('https');
 function httpsPost(url, body) {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
-    const data   = JSON.stringify(body);
+    const data = JSON.stringify(body);
     const req = https.request({
       hostname: parsed.hostname,
-      path:     parsed.pathname + parsed.search,
-      method:   'POST',
-      headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
+      path: parsed.pathname + parsed.search,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
     }, (res) => {
       let raw = '';
       res.on('data', chunk => raw += chunk);
@@ -45,6 +45,8 @@ MARKING RULES (apply exactly):
 8. Units — missing or wrong units on a final answer = WRONG step.
 9. A step is CORRECT only if BOTH the method and the arithmetic are right.
 10. Do not award marks for the right answer if the working shown is wrong.
+11. Use whole number for molar mass or Mr except for chlorine 35.5
+12. Allow error carry forward for calculation 
 
 STEP IDENTIFICATION:
 Read the image top to bottom. Number every distinct line of working as a separate step:
@@ -109,7 +111,7 @@ exports.handler = async (event) => {
   let base64, mimeType;
   try {
     const body = JSON.parse(event.body);
-    base64   = body.base64;
+    base64 = body.base64;
     mimeType = body.mimeType || 'image/jpeg';
     if (!base64) throw new Error('Missing image data');
   } catch (e) {
@@ -136,7 +138,7 @@ exports.handler = async (event) => {
         requestBody
       );
       respStatus = r.status;
-      respBody   = r.body;
+      respBody = r.body;
     } catch (networkErr) {
       lastErr = 'Network error reaching Gemini: ' + networkErr.message;
       continue;
@@ -164,7 +166,7 @@ exports.handler = async (event) => {
       }
 
       const start = text.indexOf('{');
-      const end   = text.lastIndexOf('}');
+      const end = text.lastIndexOf('}');
       if (start === -1 || end === -1) {
         return {
           statusCode: 422,
