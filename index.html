@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>MoleMark 🧪</title>
-  <!-- API key is stored as a Cloudflare Worker environment variable — never in this file -->
+  <!-- No API key in this file. Key is stored in the Cloudflare Worker environment. -->
   <link
     href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Caveat:wght@400;600;700&display=swap"
     rel="stylesheet">
@@ -132,49 +132,6 @@
       display: flex;
       align-items: center;
       gap: 6px;
-    }
-
-    /* ===== API KEY ===== */
-    .api-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .api-input {
-      flex: 1;
-      padding: 11px 14px;
-      border: 2px solid #e4d9ff;
-      border-radius: 12px;
-      font-family: 'Nunito', sans-serif;
-      font-size: 0.88rem;
-      outline: none;
-      transition: border-color 0.2s;
-      background: #faf8ff;
-    }
-
-    .api-input:focus {
-      border-color: var(--accent);
-    }
-
-    .api-toggle {
-      background: var(--lavender);
-      border: none;
-      border-radius: 10px;
-      padding: 11px 12px;
-      cursor: pointer;
-      font-size: 1rem;
-      flex-shrink: 0;
-    }
-
-    .api-hint {
-      font-size: 0.72rem;
-      color: var(--muted);
-      margin-top: 7px;
-    }
-
-    .api-hint a {
-      color: var(--accent);
     }
 
     /* ===== STUDENT NAME ===== */
@@ -586,7 +543,6 @@
     </div>
   </div>
 
-
   <div class="container">
 
     <!-- STUDENT NAME (optional) -->
@@ -663,18 +619,21 @@
 
     </div>
 
-    <div class="footer">MoleMark · Singapore 6092 O-Level Chemistry · v1.0</div>
+    <div class="footer">MoleMark · Singapore 6092 O-Level Chemistry · v2.0</div>
   </div>
 
   <script>
+    // =====================================================================
+    //  NETLIFY FUNCTION URL — key is stored in Netlify env vars, not here
+    // =====================================================================
+    const WORKER_URL = '/.netlify/functions/mark';
+
     // =====================================================================
     //  STATE
     // =====================================================================
     let uploadedFile = null;
     let loadedImage = new Image();
     let markedDataURL = null;
-
-    // API key lives on the server — nothing to manage here
 
     // =====================================================================
     //  FILE HANDLING
@@ -689,7 +648,6 @@
     document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
     document.getElementById('cameraInput').addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
 
-    // Drag and drop on the zone
     const zone = document.getElementById('uploadZone');
     zone.addEventListener('click', () => openGallery());
     zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
@@ -739,19 +697,16 @@
     // =====================================================================
     async function markWork() {
       hideErr();
-      // Show spinner immediately so user knows something is happening
       document.getElementById('markBtn').disabled = true;
       document.getElementById('loading').style.display = 'block';
       document.getElementById('results').style.display = 'none';
 
       try {
         if (!uploadedFile) throw new Error('Please upload an image first.');
-
         const base64   = await toBase64(uploadedFile);
         const mimeType = uploadedFile.type || 'image/jpeg';
         const result   = await callServer(base64, mimeType);
         renderResults(result);
-
       } catch (err) {
         document.getElementById('loading').style.display = 'none';
         document.getElementById('markBtn').disabled = false;
@@ -760,12 +715,8 @@
     }
 
     // =====================================================================
-    //  SERVER CALL — proxies to Gemini via Cloudflare Worker
-    //  The API key lives only in Cloudflare — students cannot see it.
-    //  Replace WORKER_URL below with your own Cloudflare Worker URL.
+    //  SERVER CALL — Cloudflare Worker proxy (API key lives there, not here)
     // =====================================================================
-    const WORKER_URL = 'PASTE_YOUR_CLOUDFLARE_WORKER_URL_HERE';
-
     async function callServer(base64, mimeType) {
       const resp = await fetch(WORKER_URL, {
         method: 'POST',
@@ -781,7 +732,6 @@
     //  RENDER RESULTS
     // =====================================================================
     function renderResults(result) {
-      // ---- Annotate canvas ----
       const src = document.getElementById('markedCanvas');
       const maxW = src.parentElement?.offsetWidth || 400;
       const scale = Math.min(1, maxW / loadedImage.naturalWidth);
@@ -791,14 +741,12 @@
       const ctx = src.getContext('2d');
       ctx.drawImage(loadedImage, 0, 0, src.width, src.height);
 
-      // Collect wrong-step notes to stagger vertically
       const wrongSteps = result.steps.filter(s => !s.isCorrect);
       let noteYCursor = -1;
 
       result.steps.forEach(step => {
         const px = step.xFraction * src.width;
         const py = step.yFraction * src.height;
-
         if (step.isCorrect) {
           drawTick(ctx, px, py, src.width);
         } else {
@@ -806,10 +754,8 @@
         }
       });
 
-      // Draw margin notes for wrong steps (right margin, staggered)
-      wrongSteps.forEach((step, idx) => {
+      wrongSteps.forEach(step => {
         const py = step.yFraction * src.height;
-        // stagger: use actual y but enforce minimum gap
         const noteY = Math.max(noteYCursor + 60, py);
         noteYCursor = noteY;
         drawMarginNote(ctx, step.correctedWork || step.explanation, noteY, src.width);
@@ -817,14 +763,13 @@
 
       markedDataURL = src.toDataURL('image/jpeg', 0.92);
 
-      // ---- Score card ----
       const total = result.totalSteps || result.steps.length;
       const correct = result.correctSteps || result.steps.filter(s => s.isCorrect).length;
       const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
       const name = document.getElementById('studentName').value.trim();
 
       const scoreFrac = document.getElementById('scoreFraction');
-      const scoreMsg = document.getElementById('scoreMsg');
+      const scoreMsg  = document.getElementById('scoreMsg');
       const scoreCard = document.getElementById('scoreCard');
       const scoreEmoji = document.getElementById('scoreEmoji');
       const scoreName = document.getElementById('scoreName');
@@ -844,7 +789,6 @@
         scoreEmoji.textContent = '📚';
       }
 
-      // ---- Feedback list ----
       const list = document.getElementById('feedbackList');
       list.innerHTML = '';
       result.steps.forEach(step => {
@@ -860,7 +804,6 @@
         list.appendChild(div);
       });
 
-      // Show results
       document.getElementById('loading').style.display = 'none';
       document.getElementById('results').style.display = 'block';
       document.getElementById('markBtn').disabled = false;
@@ -868,7 +811,7 @@
     }
 
     // =====================================================================
-    //  CANVAS DRAWING HELPERS — handwritten-feel
+    //  CANVAS DRAWING HELPERS
     // =====================================================================
     function tickSize(canvasWidth) { return Math.max(16, canvasWidth * 0.045); }
     function strokeW(canvasWidth) { return Math.max(2.5, canvasWidth * 0.007); }
@@ -880,7 +823,6 @@
       ctx.lineWidth = strokeW(cw);
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      // Slightly imperfect tick for handwritten feel
       ctx.beginPath();
       ctx.moveTo(x, y + s * 0.05);
       ctx.lineTo(x + s * 0.38, y + s * 0.62);
@@ -895,7 +837,6 @@
       ctx.strokeStyle = '#dc2626';
       ctx.lineWidth = strokeW(cw);
       ctx.lineCap = 'round';
-      // Slightly rotated cross
       ctx.beginPath();
       ctx.moveTo(x - s, y - s * 0.9);
       ctx.lineTo(x + s * 0.9, y + s);
@@ -922,7 +863,6 @@
       const noteH = lines.length * lineH + 12;
       const noteY = y - fontSize * 0.5;
 
-      // Sticky-note style background
       ctx.fillStyle = 'rgba(255, 250, 180, 0.94)';
       ctx.strokeStyle = '#ca8a04';
       ctx.lineWidth = 1.5;
@@ -930,12 +870,10 @@
       ctx.fill();
       ctx.stroke();
 
-      // Left accent bar
       ctx.fillStyle = '#dc2626';
       roundRect(ctx, noteX, noteY - fontSize, 4, noteH, 3);
       ctx.fill();
 
-      // Text
       ctx.fillStyle = '#7c2d12';
       lines.forEach((line, i) => {
         ctx.fillText(line, noteX + 10, noteY + i * lineH);
