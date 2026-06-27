@@ -26,10 +26,10 @@ function httpsPost(url, body) {
 }
 
 const GEMINI_MODELS = [
+  'gemini-2.5-flash-lite',  // fastest — try first
   'gemini-2.5-flash',
   'gemini-3.5-flash',
   'gemini-3.1-flash-lite',
-  'gemini-2.5-flash-lite',
 ];
 
 const PROMPT = `You are a Singapore O-Level Chemistry (6092) marker. Your job is to mark mole calculation working strictly and consistently using the rules below. Apply these rules the same way every time — do not vary your judgement between attempts.
