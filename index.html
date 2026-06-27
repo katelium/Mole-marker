@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MoleMark 🧪</title>
+  <!-- API key is stored as a Cloudflare Worker environment variable — never in this file -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Caveat:wght@400;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --mint: #b8f0e0;
+      --lavender: #d4b8f0;
+      --peach: #f0d4b8;
+      --sky: #b8d4f0;
+      --coral: #f0b8b8;
+      --lemon: #f0f0b8;
+      --bg: #f5f0ff;
+      --white: #ffffff;
+      --text: #2d2d2d;
+      --muted: #7a7a8c;
+      --correct: #16a34a;
+      --wrong: #dc2626;
+      --accent: #7c3aed;
+      --accent2: #3b82f6;
+      --shadow: 0 4px 20px rgba(124, 58, 237, 0.10);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+      padding: 24px 20px 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 160px;
+      height: 160px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 50%;
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -50px;
+      left: -30px;
+      width: 120px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 50%;
+    }
+
+    .header h1 {
+      font-size: 1.9rem;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -0.5px;
+      position: relative;
+    }
+
+    .header p {
+      font-size: 0.88rem;
+      color: rgba(255, 255, 255, 0.85);
+      margin-top: 4px;
+      position: relative;
+    }
+
+    .pill-row {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    .pill {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.3px;
+    }
+
+    /* ===== CONTAINER ===== */
+    .container {
+      padding: 16px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* ===== CARD ===== */
+    .card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ===== API KEY ===== */
+    .api-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .api-input {
+      flex: 1;
+      padding: 11px 14px;
+      border: 2px solid #e4d9ff;
+      border-radius: 12px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s;
+      background: #faf8ff;
+    }
+
+    .api-input:focus {
+      border-color: var(--accent);
+    }
+
+    .api-toggle {
+      background: var(--lavender);
+      border: none;
+      border-radius: 10px;
+      padding: 11px 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .api-hint {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 7px;
+    }
+
+    .api-hint a {
+      color: var(--accent);
+    }
+
+    /* ===== STUDENT NAME ===== */
+    .name-input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 2px solid #e4d9ff;
+      border-radius: 12px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.88rem;
+      outline: none;
+      background: #faf8ff;
+      transition: border-color 0.2s;
+    }
+
+    .name-input:focus {
+      border-color: var(--accent);
+    }
+
+    /* ===== UPLOAD ===== */
+    .upload-zone {
+      border: 3px dashed #c4b5fd;
+      border-radius: 18px;
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      background: #faf7ff;
+      transition: background 0.2s, border-color 0.2s;
+      position: relative;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag {
+      background: #f0ebff;
+      border-color: var(--accent);
+    }
+
+    .upload-zone .icon {
+      font-size: 3rem;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .upload-zone .label {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .upload-zone .sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 5px;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    /* camera / gallery split */
+    .upload-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .upload-btn {
+      flex: 1;
+      padding: 11px 8px;
+      border: 2px solid #e4d9ff;
+      background: #faf8ff;
+      border-radius: 14px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .upload-btn:hover {
+      background: #f0ebff;
+    }
+
+    /* preview */
+    .preview-wrap {
+      display: none;
+      margin-top: 12px;
+      position: relative;
+    }
+
+    #previewCanvas {
+      width: 100%;
+      border-radius: 14px;
+      display: block;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .retake-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ===== MARK BUTTON ===== */
+    #markBtn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #7c3aed, #3b82f6);
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(124, 58, 237, 0.35);
+      transition: opacity 0.2s, transform 0.1s;
+      margin-bottom: 14px;
+    }
+
+    #markBtn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    #markBtn:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    /* ===== LOADING ===== */
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 32px 20px;
+      background: white;
+      border-radius: 20px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .beaker-anim {
+      font-size: 3rem;
+      display: block;
+      animation: bob 1.4s ease-in-out infinite;
+    }
+
+    @keyframes bob {
+
+      0%,
+      100% {
+        transform: translateY(0) rotate(-5deg);
+      }
+
+      50% {
+        transform: translateY(-8px) rotate(5deg);
+      }
+    }
+
+    .loading-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-top: 12px;
+    }
+
+    .loading-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .dots {
+      display: inline-block;
+    }
+
+    .dots::after {
+      content: '';
+      animation: ellipsis 1.5s infinite;
+    }
+
+    @keyframes ellipsis {
+      0% {
+        content: '.';
+      }
+
+      33% {
+        content: '..';
+      }
+
+      66% {
+        content: '...';
+      }
+
+      100% {
+        content: '';
+      }
+    }
+
+    /* ===== RESULTS ===== */
+    #results {
+      display: none;
+    }
+
+    /* marked image */
+    .marked-img-wrap {
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.12);
+      margin-bottom: 4px;
+    }
+
+    #markedCanvas {
+      width: 100%;
+      display: block;
+    }
+
+    /* score card */
+    .score-card {
+      border-radius: 20px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .score-card.excellent {
+      background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    }
+
+    .score-card.good {
+      background: linear-gradient(135deg, #fef9c3, #fde68a);
+    }
+
+    .score-card.poor {
+      background: linear-gradient(135deg, #ffe4e6, #fecaca);
+    }
+
+    .score-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #555;
+      margin-bottom: 4px;
+    }
+
+    .score-fraction {
+      font-family: 'Caveat', cursive;
+      font-size: 3.2rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .score-card.excellent .score-fraction {
+      color: #15803d;
+    }
+
+    .score-card.good .score-fraction {
+      color: #92400e;
+    }
+
+    .score-card.poor .score-fraction {
+      color: #991b1b;
+    }
+
+    .score-emoji {
+      font-size: 1.8rem;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .score-msg {
+      font-size: 0.82rem;
+      color: #444;
+      margin-top: 8px;
+      line-height: 1.4;
+      font-style: italic;
+    }
+
+    /* feedback list */
+    .feedback-item {
+      display: flex;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      margin-bottom: 8px;
+    }
+
+    .feedback-item.correct {
+      background: #f0fdf4;
+      border-left: 4px solid var(--correct);
+    }
+
+    .feedback-item.wrong {
+      background: #fff1f2;
+      border-left: 4px solid var(--wrong);
+    }
+
+    .fi-icon {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      padding-top: 1px;
+    }
+
+    .fi-body {}
+
+    .fi-step {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #222;
+      margin-bottom: 3px;
+      font-family: 'Caveat', cursive;
+      font-size: 0.95rem;
+    }
+
+    .fi-exp {
+      font-size: 0.78rem;
+      color: #444;
+      line-height: 1.45;
+    }
+
+    .fi-correct {
+      font-size: 0.78rem;
+      color: var(--correct);
+      font-weight: 700;
+      margin-top: 3px;
+    }
+
+    /* action buttons */
+    .action-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .btn-dl {
+      flex: 1;
+      padding: 13px;
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 3px 10px rgba(22, 163, 74, 0.3);
+    }
+
+    .btn-new {
+      flex: 1;
+      padding: 13px;
+      background: white;
+      color: var(--accent);
+      border: 2px solid #c4b5fd;
+      border-radius: 14px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>🧪 MoleMark</h1>
+    <p>AI-powered mole calculation checker for O-Level Chemistry</p>
+    <div class="pill-row">
+      <span class="pill">n = m/Mr</span>
+      <span class="pill">n = cV</span>
+      <span class="pill">n = V/24</span>
+      <span class="pill">Stoichiometry</span>
+    </div>
+  </div>
+
+
+  <div class="container">
+
+    <!-- STUDENT NAME (optional) -->
+    <div class="card">
+      <div class="card-title">👤 Student Name <span
+          style="font-weight:400;color:#aaa;font-size:0.8rem">(optional)</span></div>
+      <input type="text" class="name-input" id="studentName" placeholder="e.g. Wei Ming, 3A…">
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="card">
+      <div class="card-title">📸 Upload Answer Script</div>
+
+      <div class="upload-zone" id="uploadZone">
+        <span class="icon">📝</span>
+        <div class="label">Tap to upload image</div>
+        <div class="sub">Photo of handwritten or printed mole calculations</div>
+      </div>
+
+      <div class="upload-btns">
+        <button class="upload-btn" onclick="openCamera()">📷 Camera</button>
+        <button class="upload-btn" onclick="openGallery()">🖼️ Gallery</button>
+      </div>
+
+      <input type="file" id="fileInput" accept="image/*">
+      <input type="file" id="cameraInput" accept="image/*" capture="environment">
+
+      <div class="preview-wrap" id="previewWrap">
+        <canvas id="previewCanvas"></canvas>
+        <button class="retake-btn" onclick="retake()">✕ Retake</button>
+      </div>
+    </div>
+
+    <!-- MARK BUTTON -->
+    <button id="markBtn" disabled onclick="markWork()">✅ Mark My Work</button>
+
+    <!-- LOADING -->
+    <div id="loading">
+      <span class="beaker-anim">⚗️</span>
+      <div class="loading-title">Marking in progress<span class="dots"></span></div>
+      <div class="loading-sub">Analysing each step carefully 🔬</div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="results">
+
+      <!-- Marked image -->
+      <div class="card">
+        <div class="card-title">📝 Marked Script</div>
+        <div class="marked-img-wrap">
+          <canvas id="markedCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Score -->
+      <div class="score-card" id="scoreCard">
+        <span class="score-emoji" id="scoreEmoji">🌟</span>
+        <div class="score-name" id="scoreName"></div>
+        <div class="score-fraction" id="scoreFraction">—</div>
+        <div class="score-msg" id="scoreMsg"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="card">
+        <div class="card-title">📋 Step-by-Step Feedback</div>
+        <div id="feedbackList"></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="action-row">
+        <button class="btn-dl" onclick="downloadMarked()">⬇️ Save Image</button>
+        <button class="btn-new" onclick="resetAll()">📷 New Script</button>
+      </div>
+
+    </div>
+
+    <div class="footer">MoleMark · Singapore 6092 O-Level Chemistry · v1.0</div>
+  </div>
+
+  <script>
+    // =====================================================================
+    //  STATE
+    // =====================================================================
+    let uploadedFile = null;
+    let loadedImage = new Image();
+    let markedDataURL = null;
+
+    // API key lives on the server — nothing to manage here
+
+    // =====================================================================
+    //  FILE HANDLING
+    // =====================================================================
+    function openCamera() {
+      document.getElementById('cameraInput').click();
+    }
+    function openGallery() {
+      document.getElementById('fileInput').click();
+    }
+
+    document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+    document.getElementById('cameraInput').addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+
+    // Drag and drop on the zone
+    const zone = document.getElementById('uploadZone');
+    zone.addEventListener('click', () => openGallery());
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('drag');
+      if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+    });
+
+    function processFile(file) {
+      uploadedFile = file;
+      const reader = new FileReader();
+      reader.onload = e => {
+        loadedImage = new Image();
+        loadedImage.onload = () => {
+          drawPreview();
+          zone.style.display = 'none';
+          document.getElementById('previewWrap').style.display = 'block';
+          document.getElementById('markBtn').disabled = false;
+        };
+        loadedImage.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function drawPreview() {
+      const canvas = document.getElementById('previewCanvas');
+      const maxW = canvas.parentElement.offsetWidth || 400;
+      const scale = Math.min(1, maxW / loadedImage.naturalWidth);
+      canvas.width = loadedImage.naturalWidth * scale;
+      canvas.height = loadedImage.naturalHeight * scale;
+      canvas.getContext('2d').drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
+    }
+
+    function retake() {
+      uploadedFile = null;
+      document.getElementById('fileInput').value = '';
+      document.getElementById('cameraInput').value = '';
+      zone.style.display = '';
+      document.getElementById('previewWrap').style.display = 'none';
+      document.getElementById('markBtn').disabled = true;
+    }
+
+    // =====================================================================
+    //  MAIN: MARK WORK
+    // =====================================================================
+    async function markWork() {
+      hideErr();
+      // Show spinner immediately so user knows something is happening
+      document.getElementById('markBtn').disabled = true;
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('results').style.display = 'none';
+
+      try {
+        if (!uploadedFile) throw new Error('Please upload an image first.');
+
+        const base64   = await toBase64(uploadedFile);
+        const mimeType = uploadedFile.type || 'image/jpeg';
+        const result   = await callServer(base64, mimeType);
+        renderResults(result);
+
+      } catch (err) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('markBtn').disabled = false;
+        showErr(err.message || 'Something went wrong. Please try again.');
+      }
+    }
+
+    // =====================================================================
+    //  SERVER CALL — proxies to Gemini via Cloudflare Worker
+    //  The API key lives only in Cloudflare — students cannot see it.
+    //  Replace WORKER_URL below with your own Cloudflare Worker URL.
+    // =====================================================================
+    const WORKER_URL = 'PASTE_YOUR_CLOUDFLARE_WORKER_URL_HERE';
+
+    async function callServer(base64, mimeType) {
+      const resp = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64, mimeType }),
+      });
+      const data = await resp.json().catch(() => ({ error: `Server error ${resp.status}` }));
+      if (!resp.ok) throw new Error(data.error || `Server error ${resp.status}`);
+      return data;
+    }
+
+    // =====================================================================
+    //  RENDER RESULTS
+    // =====================================================================
+    function renderResults(result) {
+      // ---- Annotate canvas ----
+      const src = document.getElementById('markedCanvas');
+      const maxW = src.parentElement?.offsetWidth || 400;
+      const scale = Math.min(1, maxW / loadedImage.naturalWidth);
+      src.width = loadedImage.naturalWidth * scale;
+      src.height = loadedImage.naturalHeight * scale;
+
+      const ctx = src.getContext('2d');
+      ctx.drawImage(loadedImage, 0, 0, src.width, src.height);
+
+      // Collect wrong-step notes to stagger vertically
+      const wrongSteps = result.steps.filter(s => !s.isCorrect);
+      let noteYCursor = -1;
+
+      result.steps.forEach(step => {
+        const px = step.xFraction * src.width;
+        const py = step.yFraction * src.height;
+
+        if (step.isCorrect) {
+          drawTick(ctx, px, py, src.width);
+        } else {
+          drawCross(ctx, px, py, src.width);
+        }
+      });
+
+      // Draw margin notes for wrong steps (right margin, staggered)
+      wrongSteps.forEach((step, idx) => {
+        const py = step.yFraction * src.height;
+        // stagger: use actual y but enforce minimum gap
+        const noteY = Math.max(noteYCursor + 60, py);
+        noteYCursor = noteY;
+        drawMarginNote(ctx, step.correctedWork || step.explanation, noteY, src.width);
+      });
+
+      markedDataURL = src.toDataURL('image/jpeg', 0.92);
+
+      // ---- Score card ----
+      const total = result.totalSteps || result.steps.length;
+      const correct = result.correctSteps || result.steps.filter(s => s.isCorrect).length;
+      const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+      const name = document.getElementById('studentName').value.trim();
+
+      const scoreFrac = document.getElementById('scoreFraction');
+      const scoreMsg = document.getElementById('scoreMsg');
+      const scoreCard = document.getElementById('scoreCard');
+      const scoreEmoji = document.getElementById('scoreEmoji');
+      const scoreName = document.getElementById('scoreName');
+
+      scoreFrac.textContent = `${correct} / ${total}`;
+      if (name) scoreName.textContent = name;
+      scoreMsg.textContent = result.overallFeedback || '';
+
+      if (pct >= 80) {
+        scoreCard.className = 'score-card excellent';
+        scoreEmoji.textContent = '🌟';
+      } else if (pct >= 50) {
+        scoreCard.className = 'score-card good';
+        scoreEmoji.textContent = '💪';
+      } else {
+        scoreCard.className = 'score-card poor';
+        scoreEmoji.textContent = '📚';
+      }
+
+      // ---- Feedback list ----
+      const list = document.getElementById('feedbackList');
+      list.innerHTML = '';
+      result.steps.forEach(step => {
+        const div = document.createElement('div');
+        div.className = `feedback-item ${step.isCorrect ? 'correct' : 'wrong'}`;
+        div.innerHTML = `
+      <div class="fi-icon">${step.isCorrect ? '✅' : '❌'}</div>
+      <div class="fi-body">
+        <div class="fi-step">Step ${step.stepNumber}: ${esc(step.studentWork)}</div>
+        <div class="fi-exp">${esc(step.explanation)}</div>
+        ${step.correctedWork ? `<div class="fi-correct">✓ Should be: ${esc(step.correctedWork)}</div>` : ''}
+      </div>`;
+        list.appendChild(div);
+      });
+
+      // Show results
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('results').style.display = 'block';
+      document.getElementById('markBtn').disabled = false;
+      document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // =====================================================================
+    //  CANVAS DRAWING HELPERS — handwritten-feel
+    // =====================================================================
+    function tickSize(canvasWidth) { return Math.max(16, canvasWidth * 0.045); }
+    function strokeW(canvasWidth) { return Math.max(2.5, canvasWidth * 0.007); }
+
+    function drawTick(ctx, x, y, cw) {
+      const s = tickSize(cw);
+      ctx.save();
+      ctx.strokeStyle = '#16a34a';
+      ctx.lineWidth = strokeW(cw);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      // Slightly imperfect tick for handwritten feel
+      ctx.beginPath();
+      ctx.moveTo(x, y + s * 0.05);
+      ctx.lineTo(x + s * 0.38, y + s * 0.62);
+      ctx.lineTo(x + s * 0.95, y - s * 0.52);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCross(ctx, x, y, cw) {
+      const s = tickSize(cw) * 0.7;
+      ctx.save();
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = strokeW(cw);
+      ctx.lineCap = 'round';
+      // Slightly rotated cross
+      ctx.beginPath();
+      ctx.moveTo(x - s, y - s * 0.9);
+      ctx.lineTo(x + s * 0.9, y + s);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + s, y - s);
+      ctx.lineTo(x - s * 0.9, y + s * 0.95);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawMarginNote(ctx, text, y, canvasWidth) {
+      if (!text) return;
+      ctx.save();
+
+      const fontSize = Math.max(11, canvasWidth * 0.030);
+      const noteX = canvasWidth * 0.60;
+      const maxW = canvasWidth * 0.38;
+      const shortText = text.length > 80 ? text.substring(0, 77) + '…' : text;
+
+      ctx.font = `italic ${fontSize}px 'Caveat', cursive, sans-serif`;
+      const lines = wrapText(ctx, shortText, maxW - 12);
+      const lineH = fontSize * 1.35;
+      const noteH = lines.length * lineH + 12;
+      const noteY = y - fontSize * 0.5;
+
+      // Sticky-note style background
+      ctx.fillStyle = 'rgba(255, 250, 180, 0.94)';
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, noteX, noteY - fontSize, maxW, noteH, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      // Left accent bar
+      ctx.fillStyle = '#dc2626';
+      roundRect(ctx, noteX, noteY - fontSize, 4, noteH, 3);
+      ctx.fill();
+
+      // Text
+      ctx.fillStyle = '#7c2d12';
+      lines.forEach((line, i) => {
+        ctx.fillText(line, noteX + 10, noteY + i * lineH);
+      });
+
+      ctx.restore();
+    }
+
+    function wrapText(ctx, text, maxW) {
+      const words = text.split(' ');
+      const lines = [];
+      let cur = '';
+      words.forEach(w => {
+        const test = cur ? cur + ' ' + w : w;
+        if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+        else cur = test;
+      });
+      if (cur) lines.push(cur);
+      return lines;
+    }
+
+    function roundRect(ctx, x, y, w, h, r = 6) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    // =====================================================================
+    //  UTILITIES
+    // =====================================================================
+    function toBase64(file) {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result.split(',')[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+    }
+
+    function esc(str = '') {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function showErr(msg) {
+      let banner = document.getElementById('errBanner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'errBanner';
+        banner.style.cssText = `
+          background:#fef2f2; border:2px solid #fca5a5; border-radius:14px;
+          padding:14px 16px; margin-bottom:14px; color:#991b1b;
+          font-family:'Nunito',sans-serif; font-size:0.88rem; font-weight:700;
+          line-height:1.5; display:flex; gap:10px; align-items:flex-start;`;
+        document.getElementById('markBtn').insertAdjacentElement('afterend', banner);
+      }
+      banner.innerHTML = `<span style="font-size:1.2rem;flex-shrink:0">⚠️</span><span>${esc(msg)}</span>`;
+      banner.style.display = 'flex';
+      banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideErr() {
+      const b = document.getElementById('errBanner');
+      if (b) b.style.display = 'none';
+    }
+
+    function downloadMarked() {
+      if (!markedDataURL) return;
+      const name = document.getElementById('studentName').value.trim();
+      const fname = name ? `molemark_${name.replace(/\s+/g, '_')}.jpg` : 'molemark_result.jpg';
+      const a = document.createElement('a');
+      a.href = markedDataURL;
+      a.download = fname;
+      a.click();
+    }
+
+    function resetAll() {
+      uploadedFile = null;
+      markedDataURL = null;
+      document.getElementById('fileInput').value = '';
+      document.getElementById('cameraInput').value = '';
+      zone.style.display = '';
+      document.getElementById('previewWrap').style.display = 'none';
+      document.getElementById('markBtn').disabled = true;
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('loading').style.display = 'none';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+
+</body>
+
+</html>
