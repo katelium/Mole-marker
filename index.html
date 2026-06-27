@@ -556,19 +556,22 @@
     <div class="card">
       <div class="card-title">📸 Upload Answer Script</div>
 
-      <div class="upload-zone" id="uploadZone">
+      <!-- Hidden file inputs -->
+      <input type="file" id="fileInput"   accept="image/*"                    style="display:none">
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+
+      <!-- Upload zone: label triggers gallery picker natively (no JS click needed) -->
+      <label for="fileInput" class="upload-zone" id="uploadZone" style="display:block;cursor:pointer;">
         <span class="icon">📝</span>
         <div class="label">Tap to upload image</div>
         <div class="sub">Photo of handwritten or printed mole calculations</div>
-      </div>
+      </label>
 
+      <!-- Buttons: labels trigger inputs natively — works on all iOS versions -->
       <div class="upload-btns">
-        <button class="upload-btn" onclick="openCamera()">📷 Camera</button>
-        <button class="upload-btn" onclick="openGallery()">🖼️ Gallery</button>
+        <label for="cameraInput" class="upload-btn">📷 Camera</label>
+        <label for="fileInput"   class="upload-btn">🖼️ Gallery</label>
       </div>
-
-      <input type="file" id="fileInput" accept="image/*">
-      <input type="file" id="cameraInput" accept="image/*" capture="environment">
 
       <div class="preview-wrap" id="previewWrap">
         <canvas id="previewCanvas"></canvas>
@@ -619,7 +622,7 @@
 
     </div>
 
-    <div class="footer">EVG . Ms Teng</div>
+    <div class="footer">EVG. Ms Teng</div>
   </div>
 
   <script>
@@ -638,15 +641,14 @@
 
     // =====================================================================
     //  FILE HANDLING
+    //  Buttons and upload zone use <label for="inputId"> — no JS .click() needed.
+    //  This is the most reliable approach on iOS Safari.
     // =====================================================================
-    function openCamera()  { document.getElementById('cameraInput').click(); }
-    function openGallery() { document.getElementById('fileInput').click(); }
-
-    document.getElementById('fileInput').addEventListener('change',  e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+    document.getElementById('fileInput').addEventListener('change',   e => { if (e.target.files[0]) processFile(e.target.files[0]); });
     document.getElementById('cameraInput').addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
 
+    // Drag-and-drop (desktop)
     const zone = document.getElementById('uploadZone');
-    zone.addEventListener('click', () => openGallery());
     zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
     zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
     zone.addEventListener('drop', e => {
@@ -975,9 +977,4 @@
           padding:14px 16px; margin-bottom:14px; color:#991b1b;
           font-family:'Nunito',sans-serif; font-size:0.88rem; font-weight:700;
           line-height:1.5; display:flex; gap:10px; align-items:flex-start;`;
-        document.getElementById('markBtn').insertAdjacentElement('afterend', banner);
-      }
-      banner.innerHTML = `<span style="font-size:1.2rem;flex-shrink:0">⚠️</span><span>${esc(msg)}</span>`;
-      banner.style.display = 'flex';
-      banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+        document.getElementById('markBtn').in
