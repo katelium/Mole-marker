@@ -32,48 +32,50 @@ const GEMINI_MODELS = [
   'gemini-2.5-flash-lite',
 ];
 
-const PROMPT = `You are an expert Singapore O-Level Chemistry (6092) marker specialising in mole calculations.
+const PROMPT = `You are a Singapore O-Level Chemistry (6092) marker. Your job is to mark mole calculation working strictly and consistently using the rules below. Apply these rules the same way every time — do not vary your judgement between attempts.
 
-Carefully examine this student's handwritten or printed mole calculation work. Identify EVERY distinct step or line of working, including:
-- Writing or stating a formula
-- Substituting values
-- Arithmetic / unit conversion
-- Final answer with units
+MARKING RULES (apply exactly):
+1. n = m / Mr — correct only if Mr is the correct molecular/formula mass for that substance.
+2. n = c × V — V must be in dm³. If student uses cm³ without dividing by 1000, mark WRONG.
+3. n = V / 24 (r.t.p.) or n = V / 22.4 (s.t.p.) — must match the conditions stated in the question.
+4. Mole ratio — must match the balanced equation given or implied. Wrong ratio = WRONG step.
+5. Limiting reagent — must correctly identify which reagent runs out first.
+6. % yield = (actual / theoretical) × 100% — both values must be correct.
+7. Arithmetic — check every calculation. A correct method with wrong arithmetic = WRONG step.
+8. Units — missing or wrong units on a final answer = WRONG step.
+9. A step is CORRECT only if BOTH the method and the arithmetic are right.
+10. Do not award marks for the right answer if the working shown is wrong.
 
-Mark each step against these 6092 mole concepts:
-• n = m / Mr  (moles from mass and relative molecular mass)
-• n = c × V   (moles from concentration × volume in dm³; if V given in cm³ divide by 1000)
-• n = V / 24  at r.t.p.  OR  n = V / 22.4  at s.t.p. (molar gas volume)
-• Stoichiometric ratios from a balanced equation (mole ratio approach)
-• Limiting reagent identification and theoretical yield
-• Percentage yield = (actual / theoretical) × 100%
-• Any correct algebraic rearrangement of the above
+STEP IDENTIFICATION:
+Read the image top to bottom. Number every distinct line of working as a separate step:
+- Stating a formula
+- Substituting values into a formula
+- A calculation result
+- A mole ratio conversion
+- A final answer
 
-Return ONLY a valid JSON object — no markdown fences, no extra text — exactly matching this schema:
+OUTPUT FORMAT — return ONLY this JSON, no markdown fences, no extra text:
 {
-  "studentWork": "<brief description of what the full question/working is about>",
+  "studentWork": "<one sentence: what substance/reaction this question is about>",
   "steps": [
     {
       "stepNumber": 1,
-      "studentWork": "<exactly what the student wrote for this step>",
+      "studentWork": "<copy exactly what the student wrote>",
       "isCorrect": true,
       "xFraction": 0.08,
       "yFraction": 0.10,
-      "explanation": "<If correct: one short sentence confirming why. If wrong: explain the specific error and the correct approach.>",
-      "correctedWork": "<only include if isCorrect is false — the correct version of this step>"
+      "explanation": "<correct: one sentence why it is right | wrong: state exactly what the error is and what the correct value/method should be>",
+      "correctedWork": "<include only if isCorrect is false: the correct version of this step>"
     }
   ],
   "totalSteps": 5,
   "correctSteps": 4,
-  "overallFeedback": "<1–2 encouraging sentences addressed directly to the student>",
+  "overallFeedback": "<1–2 sentences of encouragement directly to the student>",
   "finalAnswerCorrect": true
 }
 
-xFraction and yFraction are the FRACTIONAL POSITION (0.0 = top/left edge, 1.0 = bottom/right edge) of this step in the IMAGE.
-Place xFraction near the LEFT MARGIN (around 0.05–0.15) so ticks/crosses appear at the start of each line.
-Vary yFraction to match the vertical position of each line in the image.
-
-Be thorough and strict — flag any arithmetic error, wrong formula, incorrect unit conversion, or missing step.`;
+xFraction: place near left margin, between 0.05 and 0.12.
+yFraction: match the vertical position of each line in the image (0.0 = top, 1.0 = bottom).`;
 
 exports.handler = async (event) => {
   // CORS preflight
@@ -121,7 +123,7 @@ exports.handler = async (event) => {
         { inlineData: { mimeType, data: base64 } }
       ]
     }],
-    generationConfig: { temperature: 0.05, maxOutputTokens: 8192 }
+    generationConfig: { temperature: 0, maxOutputTokens: 8192 }
   };
 
   let lastErr = 'Unknown error';
